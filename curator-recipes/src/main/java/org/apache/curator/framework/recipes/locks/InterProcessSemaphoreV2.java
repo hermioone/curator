@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -36,6 +36,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -74,17 +75,14 @@ import java.util.concurrent.TimeUnit;
  * Thanks to Ben Bangert (ben@groovie.org) for the algorithm used.
  * </p>
  */
-public class InterProcessSemaphoreV2
-{
+public class InterProcessSemaphoreV2 {
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final InterProcessMutex lock;
     private final CuratorFramework client;
     private final String leasesPath;
-    private final Watcher watcher = new Watcher()
-    {
+    private final Watcher watcher = new Watcher() {
         @Override
-        public void process(WatchedEvent event)
-        {
+        public void process(WatchedEvent event) {
             notifyFromWatcher();
         }
     };
@@ -101,8 +99,7 @@ public class InterProcessSemaphoreV2
      * @param path      path for the semaphore
      * @param maxLeases the max number of leases to allow for this instance
      */
-    public InterProcessSemaphoreV2(CuratorFramework client, String path, int maxLeases)
-    {
+    public InterProcessSemaphoreV2(CuratorFramework client, String path, int maxLeases) {
         this(client, path, maxLeases, null);
     }
 
@@ -111,37 +108,33 @@ public class InterProcessSemaphoreV2
      * @param path   path for the semaphore
      * @param count  the shared count to use for the max leases
      */
-    public InterProcessSemaphoreV2(CuratorFramework client, String path, SharedCountReader count)
-    {
+    public InterProcessSemaphoreV2(CuratorFramework client, String path, SharedCountReader count) {
         this(client, path, 0, count);
     }
 
-    private InterProcessSemaphoreV2(CuratorFramework client, String path, int maxLeases, SharedCountReader count)
-    {
+    private InterProcessSemaphoreV2(CuratorFramework client, String path, int maxLeases, SharedCountReader count) {
         this.client = client;
+        // lock的path是 path/locks
         lock = new InterProcessMutex(client, ZKPaths.makePath(path, LOCK_PARENT));
         this.maxLeases = (count != null) ? count.getCount() : maxLeases;
+        // leasesPath = path/leases
         leasesPath = ZKPaths.makePath(path, LEASE_PARENT);
 
-        if ( count != null )
-        {
+        if (count != null) {
             count.addListener
-                (
-                    new SharedCountListener()
-                    {
-                        @Override
-                        public void countHasChanged(SharedCountReader sharedCount, int newCount) throws Exception
-                        {
-                            InterProcessSemaphoreV2.this.maxLeases = newCount;
-                        }
+                    (
+                            new SharedCountListener() {
+                                @Override
+                                public void countHasChanged(SharedCountReader sharedCount, int newCount) throws Exception {
+                                    InterProcessSemaphoreV2.this.maxLeases = newCount;
+                                }
 
-                        @Override
-                        public void stateChanged(CuratorFramework client, ConnectionState newState)
-                        {
-                            // no need to handle this here - clients should set their own connection state listener
-                        }
-                    }
-                );
+                                @Override
+                                public void stateChanged(CuratorFramework client, ConnectionState newState) {
+                                    // no need to handle this here - clients should set their own connection state listener
+                                }
+                            }
+                    );
         }
     }
 
@@ -151,8 +144,7 @@ public class InterProcessSemaphoreV2
      *
      * @param nodeData node data
      */
-    public void setNodeData(byte[] nodeData)
-    {
+    public void setNodeData(byte[] nodeData) {
         this.nodeData = (nodeData != null) ? Arrays.copyOf(nodeData, nodeData.length) : null;
     }
 
@@ -162,8 +154,7 @@ public class InterProcessSemaphoreV2
      * @return list of nodes
      * @throws Exception ZK errors, interruptions, etc.
      */
-    public Collection<String> getParticipantNodes() throws Exception
-    {
+    public Collection<String> getParticipantNodes() throws Exception {
         return client.getChildren().forPath(leasesPath);
     }
 
@@ -172,10 +163,8 @@ public class InterProcessSemaphoreV2
      *
      * @param leases leases to close
      */
-    public void returnAll(Collection<Lease> leases)
-    {
-        for ( Lease l : leases )
-        {
+    public void returnAll(Collection<Lease> leases) {
+        for (Lease l : leases) {
             Closeables.closeQuietly(l);
         }
     }
@@ -185,8 +174,7 @@ public class InterProcessSemaphoreV2
      *
      * @param lease lease to close
      */
-    public void returnLease(Lease lease)
-    {
+    public void returnLease(Lease lease) {
         Closeables.closeQuietly(lease);
     }
 
@@ -200,8 +188,7 @@ public class InterProcessSemaphoreV2
      * @return the new lease
      * @throws Exception ZK errors, interruptions, etc.
      */
-    public Lease acquire() throws Exception
-    {
+    public Lease acquire() throws Exception {
         Collection<Lease> leases = acquire(1, 0, null);
         return leases.iterator().next();
     }
@@ -218,8 +205,7 @@ public class InterProcessSemaphoreV2
      * @return the new leases
      * @throws Exception ZK errors, interruptions, etc.
      */
-    public Collection<Lease> acquire(int qty) throws Exception
-    {
+    public Collection<Lease> acquire(int qty) throws Exception {
         return acquire(qty, 0, null);
     }
 
@@ -236,8 +222,7 @@ public class InterProcessSemaphoreV2
      * @return the new lease or null if time ran out
      * @throws Exception ZK errors, interruptions, etc.
      */
-    public Lease acquire(long time, TimeUnit unit) throws Exception
-    {
+    public Lease acquire(long time, TimeUnit unit) throws Exception {
         Collection<Lease> leases = acquire(1, time, unit);
         return (leases != null) ? leases.iterator().next() : null;
     }
@@ -258,8 +243,7 @@ public class InterProcessSemaphoreV2
      * @return the new leases or null if time ran out
      * @throws Exception ZK errors, interruptions, etc.
      */
-    public Collection<Lease> acquire(int qty, long time, TimeUnit unit) throws Exception
-    {
+    public Collection<Lease> acquire(int qty, long time, TimeUnit unit) throws Exception {
         long startMs = System.currentTimeMillis();
         boolean hasWait = (unit != null);
         long waitMs = hasWait ? TimeUnit.MILLISECONDS.convert(time, unit) : 0;
@@ -268,34 +252,26 @@ public class InterProcessSemaphoreV2
 
         ImmutableList.Builder<Lease> builder = ImmutableList.builder();
         boolean success = false;
-        try
-        {
-            while ( qty-- > 0 )
-            {
+        try {
+            while (qty-- > 0) {
                 int retryCount = 0;
                 long startMillis = System.currentTimeMillis();
                 boolean isDone = false;
-                while ( !isDone )
-                {
-                    switch ( internalAcquire1Lease(builder, startMs, hasWait, waitMs) )
-                    {
-                        case CONTINUE:
-                        {
+                while (!isDone) {
+                    switch (internalAcquire1Lease(builder, startMs, hasWait, waitMs)) {
+                        case CONTINUE: {
                             isDone = true;
                             break;
                         }
 
-                        case RETURN_NULL:
-                        {
+                        case RETURN_NULL: {
                             return null;
                         }
 
-                        case RETRY_DUE_TO_MISSING_NODE:
-                        {
+                        case RETRY_DUE_TO_MISSING_NODE: {
                             // gets thrown by internalAcquire1Lease when it can't find the lock node
                             // this can happen when the session expires, etc. So, if the retry allows, just try it all again
-                            if ( !client.getZookeeperClient().getRetryPolicy().allowRetry(retryCount++, System.currentTimeMillis() - startMillis, RetryLoop.getDefaultRetrySleeper()) )
-                            {
+                            if (!client.getZookeeperClient().getRetryPolicy().allowRetry(retryCount++, System.currentTimeMillis() - startMillis, RetryLoop.getDefaultRetrySleeper())) {
                                 throw new KeeperException.NoNodeException("Sequential path not found - possible session loss");
                             }
                             // try again
@@ -305,11 +281,8 @@ public class InterProcessSemaphoreV2
                 }
             }
             success = true;
-        }
-        finally
-        {
-            if ( !success )
-            {
+        } finally {
+            if (!success) {
                 returnAll(builder.build());
             }
         }
@@ -317,114 +290,89 @@ public class InterProcessSemaphoreV2
         return builder.build();
     }
 
-    private enum InternalAcquireResult
-    {
+    private enum InternalAcquireResult {
         CONTINUE,
         RETURN_NULL,
         RETRY_DUE_TO_MISSING_NODE
     }
 
-    private InternalAcquireResult internalAcquire1Lease(ImmutableList.Builder<Lease> builder, long startMs, boolean hasWait, long waitMs) throws Exception
-    {
-        if ( client.getState() != CuratorFrameworkState.STARTED )
-        {
+    private InternalAcquireResult internalAcquire1Lease(ImmutableList.Builder<Lease> builder, long startMs, boolean hasWait, long waitMs) throws Exception {
+        if (client.getState() != CuratorFrameworkState.STARTED) {
             return InternalAcquireResult.RETURN_NULL;
         }
 
-        if ( hasWait )
-        {
+        if (hasWait) {
             long thisWaitMs = getThisWaitMs(startMs, waitMs);
-            if ( !lock.acquire(thisWaitMs, TimeUnit.MILLISECONDS) )
-            {
+            if (!lock.acquire(thisWaitMs, TimeUnit.MILLISECONDS)) {
                 return InternalAcquireResult.RETURN_NULL;
             }
-        }
-        else
-        {
+        } else {
+            // 释放分布式锁来防止并发操作
             lock.acquire();
         }
-        try
-        {
+        try {
+            // 在 leasesPath 路径下创建了一个临时顺序节点
             PathAndBytesable<String> createBuilder = client.create().creatingParentsIfNeeded().withProtection().withMode(CreateMode.EPHEMERAL_SEQUENTIAL);
             String path = (nodeData != null) ? createBuilder.forPath(ZKPaths.makePath(leasesPath, LEASE_BASE_NAME), nodeData) : createBuilder.forPath(ZKPaths.makePath(leasesPath, LEASE_BASE_NAME));
             String nodeName = ZKPaths.getNodeFromPath(path);
             builder.add(makeLease(path));
 
-            synchronized(this)
-            {
-                for(;;)
-                {
+            // 因为用了 wait()，所以需要用 synchronized
+            synchronized (this) {
+                for (; ; ) {
+                    // 获取leasesPath目录下的所有子节点
                     List<String> children = client.getChildren().usingWatcher(watcher).forPath(leasesPath);
-                    if ( !children.contains(nodeName) )
-                    {
+                    if (!children.contains(nodeName)) {
                         log.error("Sequential path not found: " + path);
                         return InternalAcquireResult.RETRY_DUE_TO_MISSING_NODE;
                     }
-
-                    if ( children.size() <= maxLeases )
-                    {
+                    // 如果子节点的数量不超过 maxLeases（也就是Semaphore最大运行的量）
+                    if (children.size() <= maxLeases) {
                         break;
                     }
-                    if ( hasWait )
-                    {
+                    if (hasWait) {
                         long thisWaitMs = getThisWaitMs(startMs, waitMs);
-                        if ( thisWaitMs <= 0 )
-                        {
+                        if (thisWaitMs <= 0) {
                             return InternalAcquireResult.RETURN_NULL;
                         }
                         wait(thisWaitMs);
-                    }
-                    else
-                    {
+                    } else {
                         wait();
                     }
                 }
             }
-        }
-        finally
-        {
+        } finally {
             lock.release();
         }
         return InternalAcquireResult.CONTINUE;
     }
 
-    private long getThisWaitMs(long startMs, long waitMs)
-    {
+    private long getThisWaitMs(long startMs, long waitMs) {
         long elapsedMs = System.currentTimeMillis() - startMs;
         return waitMs - elapsedMs;
     }
 
-    private Lease makeLease(final String path)
-    {
-        return new Lease()
-        {
+    private Lease makeLease(final String path) {
+        return new Lease() {
             @Override
-            public void close() throws IOException
-            {
-                try
-                {
+            public void close() throws IOException {
+                try {
                     client.delete().guaranteed().forPath(path);
-                }
-                catch ( KeeperException.NoNodeException e )
-                {
+                } catch (KeeperException.NoNodeException e) {
                     log.warn("Lease already released", e);
-                }
-                catch ( Exception e )
-                {
+                } catch (Exception e) {
                     throw new IOException(e);
                 }
             }
 
             @Override
-            public byte[] getData() throws Exception
-            {
+            public byte[] getData() throws Exception {
                 return client.getData().forPath(path);
             }
         };
     }
 
-    private synchronized void notifyFromWatcher()
-    {
+    private synchronized void notifyFromWatcher() {
         notifyAll();
     }
 }

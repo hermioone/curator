@@ -23,6 +23,7 @@ import org.apache.curator.framework.CuratorFramework;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 不可重入的分布式锁，其实就是使用 Semaphore 来实现的
  * A NON re-entrant mutex that works across JVMs. Uses Zookeeper to hold the lock. All processes in all JVMs that
  * use the same lock path will achieve an inter-process critical section.
  */
